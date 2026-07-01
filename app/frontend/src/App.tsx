@@ -1,10 +1,13 @@
-import Dashboard from "./pages/Dashboard";
+import { Route, Routes } from "react-router-dom";
+
+import Dashboard from "@/pages/Dashboard";
 
 function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <Dashboard />
-    </main>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
   );
 }
 
