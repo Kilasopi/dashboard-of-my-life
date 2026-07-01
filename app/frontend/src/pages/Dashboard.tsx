@@ -1,5 +1,6 @@
-import DashboardHeader from "@/components/dashboard/DashboardHeader"
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { ProgrammingCard } from "@/components/dashboard/cards/ProgrammingCard"
+import { TimerCard } from "@/components/dashboard/cards/TimerCard"
 
 export default function Dashboard(){
     return(
@@ -7,8 +8,9 @@ export default function Dashboard(){
             <div className="mx-auto flex max-w-7xl flex-col gap-6">
                 <DashboardHeader />
 
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <ProgrammingCard />
+                    <TimerCard />
                 </section>
             </div>
         </main>
