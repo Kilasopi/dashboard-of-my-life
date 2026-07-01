@@ -6,9 +6,14 @@ A local-first personal dashboard for managing programming workflows, sim racing 
 
 ```txt
 dashboard-of-my-life/
+├─ docker-compose.yml
 ├─ app/
-│  ├─ frontend/   # React + TypeScript + Vite + Tailwind + shadcn/ui
-│  └─ backend/    # FastAPI
+│  ├─ frontend/
+│  │  ├─ Dockerfile
+│  │  └─ .dockerignore
+│  └─ backend/
+│     ├─ Dockerfile
+│     └─ .dockerignore
 ├─ data/          # Local app data, ignored by git
 ├─ docs/          # Planning and documentation
 ├─ scripts/       # Local helper scripts

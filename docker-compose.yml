@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./app/backend
+    container_name: dashboard-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/backend:/app
+    environment:
+      - PYTHONPATH=/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./app/frontend
+    container_name: dashboard-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app/frontend:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  frontend_node_modules:
