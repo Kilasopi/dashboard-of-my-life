@@ -1,10 +1,13 @@
-import { Button } from "@/components/ui/button";
+import { Route, Routes } from "react-router-dom";
+
+import Dashboard from "@/pages/Dashboard";
 
 function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <Button>Test Button</Button>
-    </main>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
   );
 }
 
