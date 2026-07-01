@@ -94,3 +94,10 @@ The goal of this project is to build a personal local dashboard that can eventua
 - Quality-of-life automations
 
 And eventually make it a desktop application that can run on my device
+
+## Planned Features
+
+### Calendar
+
+The calendar will be able to help me keep track of assignments, classes and any planned events.
+
