@@ -86,6 +86,7 @@ The goal of this project is to build a personal local dashboard that can eventua
 
 - Work/programming mode
 - Sim racing mode
+- Calendar
 - Timers and reminders
 - Local file and storage checks
 - Stream Deck-triggered routines
