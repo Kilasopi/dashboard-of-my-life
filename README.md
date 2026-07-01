@@ -97,7 +97,36 @@ And eventually make it a desktop application that can run on my device
 
 ## Planned Features
 
-### Calendar
+### **Calendar**
 
 The calendar will be able to help me keep track of assignments, classes and any planned events.
 
+### **Racing Calendar**
+
+A racing calendar will allow me to track what racing events are upcoming, both IRL and in the sim.
+
+### **iRacing Helper**
+
+This will allow me to see any upcoming events and track my progress as a driver. (Ideally some streamdeck components too with another project)
+
+### **Timers and Reminders**
+
+I want to be able to put up timers and reminders for myself and be notified when they are completed.
+
+### **Local Device Data Management**
+
+Tracking disk usage, CPU usage, WiFi usage, temperatures, and whatever else I can think of.
+
+## Potential Features
+
+### **"Work Modes"**
+
+I'd want to be able to click a button and have my device enter certain modes: Work, Sim Racing, Streaming, Programming
+
+### **Github Integration**
+
+To be able to see PR statuses
+
+### **Discord integration**
+
+To be able to see who is playing what and if people are in voice calls
