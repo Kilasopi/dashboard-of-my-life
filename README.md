@@ -92,3 +92,5 @@ The goal of this project is to build a personal local dashboard that can eventua
 - Stream Deck-triggered routines
 - Action history
 - Quality-of-life automations
+
+And eventually make it a desktop application that can run on my device
