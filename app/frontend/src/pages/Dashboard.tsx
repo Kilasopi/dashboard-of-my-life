@@ -1,5 +1,7 @@
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
+import { PlaceholderCard } from "@/components/dashboard/cards/PlaceholderCard"
 import { ProgrammingCard } from "@/components/dashboard/cards/ProgrammingCard"
+import { SystemHealthCard } from "@/components/dashboard/cards/SystemHealthCard"
 import { TimerCard } from "@/components/dashboard/cards/TimerCard"
 
 export default function Dashboard(){
@@ -11,7 +13,10 @@ export default function Dashboard(){
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <ProgrammingCard />
                     <TimerCard />
+                    <PlaceholderCard />
                 </section>
+
+                <SystemHealthCard />
             </div>
         </main>
     )
