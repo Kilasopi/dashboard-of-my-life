@@ -9,6 +9,9 @@ export default defineConfig({
     host: "localhost",
     port: 3000,
     strictPort: true,
+    proxy: {
+      "/system": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+    },
   },
   resolve: {
     alias: {

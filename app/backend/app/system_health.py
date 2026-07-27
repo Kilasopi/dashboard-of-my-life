@@ -12,10 +12,14 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/system", tags=["system"])
 
-LHM_URL = os.environ.get("LHM_URL", "http://host.docker.internal:8085/data.json")
+LHM_URL = os.environ.get("LHM_URL", "http://localhost:8085/data.json")
 LHM_TIMEOUT_SECONDS = 2.0
 
-Leaf = tuple[list[str], str, str]
+# (hardware_id, device_name, sensor_type, sensor_name, raw_value) - HardwareId/Type come
+# straight from LHM's own JSON, e.g. "/amdcpu/0" + Type "Temperature", far more reliable
+# than guessing from display text (which is how "CPU I/O" - a motherboard voltage rail -
+# used to get mistaken for a CPU sensor).
+Leaf = tuple[str | None, str | None, str | None, str, str]
 
 
 class CpuStats(BaseModel):
@@ -73,17 +77,25 @@ def _parse_value(raw: str | None) -> float | None:
         return None
 
 
-def _walk(node: dict, path: list[str], leaves: list[Leaf]) -> None:
-    text = node.get("Text", "")
+def _walk(
+    node: dict,
+    hardware_id: str | None,
+    device_name: str | None,
+    leaves: list[Leaf],
+) -> None:
+    if "HardwareId" in node:
+        hardware_id = node["HardwareId"]
+        device_name = node.get("Text")
+
     children = node.get("Children") or []
-    new_path = [*path, text]
     if children:
         for child in children:
-            _walk(child, new_path, leaves)
-    else:
-        value = node.get("Value")
-        if value and value != "-":
-            leaves.append((path, text, value))
+            _walk(child, hardware_id, device_name, leaves)
+        return
+
+    value = node.get("Value")
+    if value and value != "-":
+        leaves.append((hardware_id, device_name, node.get("Type"), node.get("Text", ""), value))
 
 
 def _fetch_lhm_leaves() -> list[Leaf] | None:
@@ -94,18 +106,8 @@ def _fetch_lhm_leaves() -> list[Leaf] | None:
         return None
 
     leaves: list[Leaf] = []
-    _walk(response.json(), [], leaves)
+    _walk(response.json(), None, None, leaves)
     return leaves or None
-
-
-def _matches(text: str, *keywords: str) -> bool:
-    lowered = text.lower()
-    return any(keyword in lowered for keyword in keywords)
-
-
-def _device_name(path: list[str], fallback: str) -> str:
-    """The hardware node's own name sits above the sensor-type group (Load/Temperatures/...)."""
-    return path[-2] if len(path) >= 2 else fallback
 
 
 def _build_from_lhm(leaves: list[Leaf]) -> SystemHealth:
@@ -113,57 +115,68 @@ def _build_from_lhm(leaves: list[Leaf]) -> SystemHealth:
     memory = MemoryStats()
     gpus: dict[str, GpuStats] = {}
     storages: dict[str, StorageStats] = {}
+    storage_free_gb: dict[str, float] = {}
 
-    for path, name, raw_value in leaves:
-        breadcrumb = " > ".join([*path, name]).lower()
+    for hardware_id, device_name, sensor_type, name, raw_value in leaves:
+        if not hardware_id:
+            continue
         value = _parse_value(raw_value)
         if value is None:
             continue
 
-        if _matches(breadcrumb, "cpu") and not _matches(breadcrumb, "gpu"):
+        if hardware_id.startswith(("/amdcpu", "/intelcpu")):
             if cpu.name is None:
-                cpu.name = _device_name(path, "CPU")
-            if name == "CPU Total" and "load" in breadcrumb:
+                cpu.name = device_name
+            if name == "CPU Total" and sensor_type == "Load":
                 cpu.load_percent = value
-            elif _matches(name, "cpu package", "core max", "core average", "tdie", "tctl"):
-                cpu.temperature_c = value
-            elif cpu.temperature_c is None and "temperature" in breadcrumb:
-                cpu.temperature_c = value
-            elif name.startswith("CPU Core #") and "load" in breadcrumb:
+            elif name.startswith("CPU Core #") and sensor_type == "Load":
                 cpu.per_core_load_percent.append(value)
+            elif sensor_type == "Temperature" and cpu.temperature_c is None:
+                cpu.temperature_c = value
             continue
 
-        if _matches(breadcrumb, "memory", "ram") and not _matches(breadcrumb, "gpu"):
-            if name == "Memory" and "load" in breadcrumb:
+        if hardware_id == "/ram":
+            if name == "Memory" and sensor_type == "Load":
                 memory.load_percent = value
-            elif name == "Memory Used":
+            elif name == "Memory Used" and sensor_type == "Data":
                 memory.used_gb = value
-            elif name == "Memory Available":
+            elif name == "Memory Available" and sensor_type == "Data":
                 memory.total_gb = round((memory.used_gb or 0) + value, 2)
             continue
 
-        if _matches(breadcrumb, "gpu"):
-            gpu_name = _device_name(path, "GPU")
-            gpu = gpus.setdefault(gpu_name, GpuStats(name=gpu_name))
-            if _matches(name, "gpu core") and "load" in breadcrumb:
+        if hardware_id.startswith("/gpu-"):
+            gpu = gpus.setdefault(hardware_id, GpuStats(name=device_name or "GPU"))
+            if name == "GPU Core" and sensor_type == "Load":
                 gpu.load_percent = value
-            elif _matches(name, "gpu core", "gpu hot spot") and "temperature" in breadcrumb:
+            elif (
+                sensor_type == "Temperature"
+                and name in ("GPU Core", "GPU Hot Spot")
+                and gpu.temperature_c is None
+            ):
                 gpu.temperature_c = value
-            elif _matches(name, "gpu memory used"):
-                gpu.memory_used_gb = value
-            elif _matches(name, "gpu memory total") or _matches(name, "gpu memory dedicated"):
-                gpu.memory_total_gb = value
+            elif name == "GPU Memory Used" and sensor_type == "SmallData":
+                gpu.memory_used_gb = round(value / 1024, 2)
+            elif name == "GPU Memory Total" and sensor_type == "SmallData":
+                gpu.memory_total_gb = round(value / 1024, 2)
             continue
 
-        is_storage = _matches(breadcrumb, "storage", "ssd", "hdd", "nvme")
-        if is_storage and not _matches(breadcrumb, "gpu"):
-            drive_name = _device_name(path, name)
-            storage = storages.setdefault(drive_name, StorageStats(name=drive_name))
-            if _matches(name, "used space"):
+        if hardware_id.startswith(("/hdd", "/nvme", "/ssd")):
+            default_name = device_name or hardware_id
+            storage = storages.setdefault(hardware_id, StorageStats(name=default_name))
+            if name == "Used Space" and sensor_type == "Load":
                 storage.used_percent = value
-            elif "temperature" in breadcrumb:
+            elif name == "Total Space" and sensor_type == "Data":
+                storage.total_gb = value
+            elif name == "Free Space" and sensor_type == "Data":
+                storage_free_gb[hardware_id] = value
+            elif sensor_type == "Temperature" and name in ("Temperature", "Composite Temperature"):
                 storage.temperature_c = value
             continue
+
+    for hardware_id, storage in storages.items():
+        free_gb = storage_free_gb.get(hardware_id)
+        if storage.total_gb is not None and free_gb is not None:
+            storage.used_gb = round(storage.total_gb - free_gb, 1)
 
     return SystemHealth(
         source="lhm",
@@ -263,8 +276,12 @@ def get_system_health() -> SystemHealth:
     leaves = _fetch_lhm_leaves()
     health = _build_from_lhm(leaves) if leaves else _build_fallback()
 
-    # Drive letters + real used/total GB (psutil) beat LHM's physical-disk,
-    # percent-only view whenever we can actually see the host filesystem.
+    # psutil re-enumerates whatever Windows currently has mounted on every request, so
+    # it picks up drives you plug in or remove without a restart - and it's the only
+    # source that reliably sees new external drives at all (LHM's SMART-based storage
+    # list often can't see removable media through a USB bridge chip). Prefer it
+    # whenever we can see the real filesystem; LHM's physical-disk view (with temps)
+    # is only used as a last resort when the backend is sandboxed in a container.
     if not _is_containerized():
         health.storage = _native_storage()
 
@@ -279,5 +296,8 @@ def get_raw_sensors() -> dict:
         return {"available": False, "sensors": []}
     return {
         "available": True,
-        "sensors": [{"path": path, "name": name, "value": value} for path, name, value in leaves],
+        "sensors": [
+            {"hardware_id": hid, "device": device, "type": typ, "name": name, "value": value}
+            for hid, device, typ, name, value in leaves
+        ],
     }

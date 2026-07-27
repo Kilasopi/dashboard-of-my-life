@@ -54,6 +54,31 @@ API docs:
 http://localhost:8000/docs
 ```
 
+## Desktop App (Windows)
+
+Packages the dashboard into a single portable `DashboardOfMyLife.exe` - the FastAPI
+backend serves the built frontend directly (one process, one port), wrapped in a
+native window via `pywebview`. No Docker needed to run it.
+
+```bat
+cd app\frontend
+npm install
+npm run build
+
+cd ..\backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements-desktop.txt
+pyinstaller DashboardOfMyLife.spec
+```
+
+The exe is written to `app\backend\dist\DashboardOfMyLife.exe`. For full CPU/GPU
+temperatures and per-drive stats, run
+[LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
+with **Options > Remote Web Server** enabled (default port 8085) before launching -
+otherwise the System Health card falls back to approximate CPU/memory plus real
+drive-letter usage from `psutil`.
+
 ## Backend Linting
 
 ```bat

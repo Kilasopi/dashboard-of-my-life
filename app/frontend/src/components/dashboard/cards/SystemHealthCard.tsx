@@ -20,11 +20,13 @@ function formatPercent(value: number | null) {
 }
 
 function formatTemp(value: number | null) {
-  return value == null ? null : `${Math.round(value)}°C`;
+  return value == null ? null : `${value.toFixed(1)}°C`;
 }
 
 function formatGb(value: number | null) {
-  return value == null ? "—" : `${value.toFixed(1)} GB`;
+  if (value == null) return "—";
+  if (value >= 1000) return `${(value / 1000).toFixed(2)} TB`;
+  return `${value.toFixed(1)} GB`;
 }
 
 function UsageTile({
