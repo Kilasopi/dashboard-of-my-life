@@ -122,6 +122,10 @@ I want to be able to put up timers and reminders for myself and be notified when
 
 Tracking disk usage, CPU usage, WiFi usage, temperatures, and whatever else I can think of.
 
+### **Spotify Now Playing**
+
+Have a mini now playing widget
+
 ## Potential Features
 
 ### **"Work Modes"**
