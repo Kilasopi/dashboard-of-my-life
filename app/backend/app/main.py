@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.claude_usage import router as claude_usage_router
 from app.programming_status import router as programming_status_router
 from app.spotify import router as spotify_router
 from app.system_health import router as system_health_router
@@ -22,6 +23,7 @@ app.add_middleware(
 app.include_router(system_health_router)
 app.include_router(programming_status_router)
 app.include_router(spotify_router)
+app.include_router(claude_usage_router)
 
 
 def _frontend_dist_dir() -> Path:

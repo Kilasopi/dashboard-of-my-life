@@ -15,6 +15,7 @@ export default defineConfig({
       "/system/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
       "/programming/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
       "/spotify/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+      "/claude-usage/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
     },
   },
   resolve: {

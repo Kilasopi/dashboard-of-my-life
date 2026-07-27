@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import subprocess
 from pathlib import Path
 
@@ -28,6 +29,9 @@ class ProgrammingStatus(BaseModel):
     behind: int | None = None
 
 
+_NO_WINDOW_FLAG = subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
+
+
 def _run_git(*args: str) -> str | None:
     try:
         result = subprocess.run(
@@ -36,6 +40,7 @@ def _run_git(*args: str) -> str | None:
             text=True,
             timeout=GIT_TIMEOUT_SECONDS,
             check=True,
+            creationflags=_NO_WINDOW_FLAG,
         )
         return result.stdout.strip()
     except (subprocess.SubprocessError, OSError):
