@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.programming_status import router as programming_status_router
+from app.spotify import router as spotify_router
 from app.system_health import router as system_health_router
 
 app = FastAPI(title="Dashboard of My Life API")
@@ -20,6 +21,7 @@ app.add_middleware(
 
 app.include_router(system_health_router)
 app.include_router(programming_status_router)
+app.include_router(spotify_router)
 
 
 def _frontend_dist_dir() -> Path:

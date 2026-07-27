@@ -1,8 +1,7 @@
-import { Activity, Code2, Timer as TimerIcon } from "lucide-react";
+import { Activity, Code2, Music2, Timer as TimerIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { NavTile } from "@/components/dashboard/NavTile";
-import { PlaceholderCard } from "@/components/dashboard/cards/PlaceholderCard";
 
 export default function Overview() {
   return (
@@ -42,7 +41,12 @@ export default function Overview() {
           description="Live hardware stats from this PC"
         />
 
-        <PlaceholderCard />
+        <NavTile
+          to="/spotify"
+          icon={<Music2 className="h-5 w-5 compact:h-3.5 compact:w-3.5" />}
+          label="Now Playing"
+          description="Album art, playback progress, and song color"
+        />
       </section>
     </>
   );
