@@ -3,8 +3,10 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.programming_status import router as programming_status_router
 from app.system_health import router as system_health_router
 
 app = FastAPI(title="Dashboard of My Life API")
@@ -17,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(system_health_router)
+app.include_router(programming_status_router)
 
 
 def _frontend_dist_dir() -> Path:
@@ -27,7 +30,19 @@ def _frontend_dist_dir() -> Path:
 
 frontend_dist = _frontend_dist_dir()
 if frontend_dist.is_dir():
-    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+    assets_dir = str(frontend_dist / "assets")
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        # SPA fallback: any client-side route (e.g. /system-health) that isn't a
+        # real file in dist/ still needs to resolve to index.html so React Router
+        # can render it - StaticFiles(html=True) only handles directory requests,
+        # not arbitrary deep links.
+        candidate = frontend_dist / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(frontend_dist / "index.html")
 else:
 
     @app.get("/")

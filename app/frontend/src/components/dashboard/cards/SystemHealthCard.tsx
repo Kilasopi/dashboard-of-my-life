@@ -47,27 +47,27 @@ function UsageTile({
   const isHighLoad = percent != null && percent >= 90;
 
   return (
-    <div className="rounded-lg border p-3">
+    <div className="rounded-lg border p-3 compact:p-1.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          {icon}
-          <span className="text-sm font-medium text-foreground">{label}</span>
+        <div className="flex min-w-0 items-center gap-2 text-muted-foreground compact:gap-1">
+          <span className="shrink-0">{icon}</span>
+          <span className="truncate text-sm font-medium text-foreground compact:text-xs">{label}</span>
         </div>
 
         {temperatureC != null && (
-          <span className={cn("text-xs font-medium", isHot ? "text-destructive" : "text-muted-foreground")}>
+          <span className={cn("shrink-0 text-xs font-medium", isHot ? "text-destructive" : "text-muted-foreground")}>
             {formatTemp(temperatureC)}
           </span>
         )}
       </div>
 
-      <div className={cn("mt-2 text-2xl font-bold tracking-tight", isHighLoad && "text-destructive")}>
+      <div className={cn("mt-2 text-2xl font-bold tracking-tight compact:mt-0.5 compact:text-base", isHighLoad && "text-destructive")}>
         {formatPercent(percent)}
       </div>
 
-      {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
+      {detail && <p className="truncate text-xs text-muted-foreground compact:hidden">{detail}</p>}
 
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary">
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary compact:mt-1 compact:h-1">
         <div
           className={cn("h-full rounded-full transition-all", isHighLoad ? "bg-destructive" : "bg-primary")}
           style={{ width: `${clampedPercent}%` }}
@@ -123,13 +123,13 @@ export function SystemHealthCard() {
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-fit rounded-xl border bg-secondary p-2">
-              <Activity className="h-5 w-5" />
+          <div className="flex items-center gap-3 compact:gap-2">
+            <div className="w-fit rounded-xl border bg-secondary p-2 compact:p-1">
+              <Activity className="h-5 w-5 compact:h-3.5 compact:w-3.5" />
             </div>
             <div>
-              <CardTitle>System Health</CardTitle>
-              <CardDescription>Live hardware stats from this PC</CardDescription>
+              <CardTitle className="compact:text-xs">System Health</CardTitle>
+              <CardDescription className="compact:hidden">Live hardware stats from this PC</CardDescription>
             </div>
           </div>
 
@@ -137,18 +137,18 @@ export function SystemHealthCard() {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 compact:space-y-1.5">
         {error ? (
           <p className="text-sm text-muted-foreground">{error}</p>
         ) : (
           <>
             {health?.message && (
-              <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+              <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground compact:hidden">
                 {health.message}
               </p>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 compact:grid-cols-4 compact:gap-1.5">
               <UsageTile
                 icon={<Cpu className="h-4 w-4" />}
                 label="CPU"

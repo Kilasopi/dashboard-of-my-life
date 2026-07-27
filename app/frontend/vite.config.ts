@@ -10,7 +10,10 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     proxy: {
-      "/system": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+      // Trailing slash matters: "/system-health" is a frontend route, not an API
+      // path, and a bare "/system" prefix would wrongly proxy it to the backend.
+      "/system/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+      "/programming/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
     },
   },
   resolve: {

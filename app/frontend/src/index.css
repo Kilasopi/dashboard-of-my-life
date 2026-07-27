@@ -4,6 +4,7 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant compact (@media (max-height: 500px));
 
 @theme inline {
   --color-background: var(--background);

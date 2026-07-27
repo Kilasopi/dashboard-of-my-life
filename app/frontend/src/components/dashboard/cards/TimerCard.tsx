@@ -69,38 +69,38 @@ export function TimerCard() {
     }
 
     return(
-        <Card>
+        <Card className="w-full">
             <CardHeader>
-                <div className="w-fit rounded-xl border bg-secondary p-2">
-                    <Timer className="h-5 w-5"/>
+                <div className="w-fit rounded-xl border bg-secondary p-2 compact:p-1">
+                    <Timer className="h-5 w-5 compact:h-3.5 compact:w-3.5"/>
                 </div>
 
-                <CardTitle>Focus Timer</CardTitle>
+                <CardTitle className="compact:text-xs">Focus Timer</CardTitle>
 
-                <CardDescription>
+                <CardDescription className="compact:hidden">
                     Start a simple focus session or break timer
                 </CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-5">
-                <div>
-                    <div className="text-5xl font-bold tracking-tight">
+            <CardContent className="flex flex-col items-center space-y-6 py-6 compact:space-y-1 compact:py-0">
+                <div className="text-center">
+                    <div className="text-7xl font-bold tracking-tight compact:text-xl md:text-8xl">
                         {formattedTime}
                     </div>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-2 text-sm text-muted-foreground compact:mt-0 compact:text-xs">
                         {isRunning ? "Timer Running" : "Timer Paused"}
                     </p>
                 </div>
 
-                <div className="h-3 overflow-hidden rounded-full bg-secondary">
+                <div className="h-3 w-full max-w-md overflow-hidden rounded-full bg-secondary compact:h-1.5">
                     <div
                         className="h-full rounded-full bg-primary transition-all"
                         style={{ width: `${clampedProgressPercent}%`}}
                     />
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap justify-center gap-2 compact:gap-1">
                     <Button size="sm" onClick={handleStartPause}>
                         {isRunning ? "Pause" : "Start"}
                     </Button>

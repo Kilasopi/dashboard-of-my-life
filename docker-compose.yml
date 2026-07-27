@@ -8,8 +8,11 @@ services:
     environment:
       - PYTHONPATH=/app
       - LHM_URL=http://host.docker.internal:8085/data.json
+      - GIT_REPO_PATH=/repo
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/repo:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     develop:
       watch:
