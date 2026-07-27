@@ -9,10 +9,13 @@ services:
       - PYTHONPATH=/app
       - LHM_URL=http://host.docker.internal:8085/data.json
       - GIT_REPO_PATH=/repo
+      - SPOTIFY_DATA_DIR=/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - .:/repo:ro
+      - ./app/backend/.env:/app/.env:ro
+      - ./data:/app/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     develop:
       watch:

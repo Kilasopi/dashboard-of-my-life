@@ -12,7 +12,9 @@ import webview
 from app.main import app
 
 HOST = "127.0.0.1"
-PORT = 8731
+# Matches the Docker backend's port so an existing Spotify app registration's
+# redirect URI (http://127.0.0.1:8000/spotify/callback) works unmodified here too.
+PORT = 8000
 
 
 def _run_server() -> None:

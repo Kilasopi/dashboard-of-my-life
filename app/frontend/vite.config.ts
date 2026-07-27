@@ -14,6 +14,7 @@ export default defineConfig({
       // path, and a bare "/system" prefix would wrongly proxy it to the backend.
       "/system/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
       "/programming/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+      "/spotify/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
     },
   },
   resolve: {

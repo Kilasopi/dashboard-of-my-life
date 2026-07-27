@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Music2, Pause, Play, Radio } from "lucide-react";
+import { Dialog, VisuallyHidden } from "radix-ui";
+import { ExternalLink, Music2, Pause, Play, Radio, Settings, X } from "lucide-react";
 
 import { API_BASE_URL } from "@/lib/api";
 
@@ -12,6 +13,7 @@ type SpotifyStatus = {
   connected: boolean;
   message: string;
   login_url: string;
+  redirect_uri: string;
 };
 
 type SpotifyNowPlaying = {
@@ -50,46 +52,208 @@ function formatTime(milliseconds: number) {
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
 }
 
+function SpotifySettingsDialog({
+  onClose,
+  redirectUriDefault,
+  onSaved,
+}: {
+  onClose: () => void;
+  redirectUriDefault: string;
+  onSaved: () => void;
+}) {
+  // Mounted only while the dialog is open (see the parent's conditional
+  // render), so this initial state is naturally fresh on every open with no
+  // effect needed to re-sync it.
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [redirectUri, setRedirectUri] = useState(redirectUriDefault);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!clientId.trim() || !clientSecret.trim()) {
+      setError("Client ID and secret are both required.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/spotify/credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId.trim(),
+          client_secret: clientSecret.trim(),
+          redirect_uri: redirectUri.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new Error(detail?.detail ?? `Request failed with status ${response.status}`);
+      }
+
+      setClientId("");
+      setClientSecret("");
+      onSaved();
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save Spotify credentials.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog.Root
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-5 text-card-foreground shadow-xl outline-none">
+          <div className="mb-4 flex items-center justify-between">
+            <Dialog.Title className="text-base font-semibold">Spotify credentials</Dialog.Title>
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </Dialog.Close>
+          </div>
+
+          <VisuallyHidden.Root asChild>
+            <Dialog.Description>
+              Update the Spotify app client ID and secret used to connect this dashboard.
+            </Dialog.Description>
+          </VisuallyHidden.Root>
+
+          <p className="mb-4 text-xs text-muted-foreground">
+            From your app at{" "}
+            <a
+              href="https://developer.spotify.com/dashboard"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              developer.spotify.com/dashboard
+            </a>
+            . Saving this reconnects Spotify, so you'll need to hit Connect again afterward.
+          </p>
+
+          <div className="space-y-3">
+            <label className="block text-sm">
+              <span className="mb-1 block text-muted-foreground">Client ID</span>
+              <input
+                value={clientId}
+                onChange={(event) => setClientId(event.target.value)}
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-muted-foreground">Client Secret</span>
+              <input
+                type="password"
+                value={clientSecret}
+                onChange={(event) => setClientSecret(event.target.value)}
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-muted-foreground">Redirect URI</span>
+              <input
+                value={redirectUri}
+                onChange={(event) => setRedirectUri(event.target.value)}
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Must exactly match a Redirect URI registered on your Spotify app.
+              </span>
+            </label>
+          </div>
+
+          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+          <div className="mt-5 flex justify-end gap-2">
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </Dialog.Close>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 export function SpotifyCards() {
   const [status, setStatus] = useState<SpotifyStatus | null>(null);
   const [playback, setPlayback] = useState<SpotifyNowPlaying | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  async function refresh() {
+    try {
+      const statusResponse = await fetch(`${API_BASE_URL}/spotify/status`);
+      if (!statusResponse.ok) throw new Error("Spotify status is unavailable");
+
+      const nextStatus = (await statusResponse.json()) as SpotifyStatus;
+      setStatus(nextStatus);
+
+      if (!nextStatus.connected) {
+        setPlayback(null);
+        setError(null);
+        return;
+      }
+
+      const playbackResponse = await fetch(`${API_BASE_URL}/spotify/now-playing`);
+      if (!playbackResponse.ok) throw new Error("Now playing is unavailable");
+
+      const nextPlayback = (await playbackResponse.json()) as SpotifyNowPlaying;
+      setPlayback(nextPlayback);
+      setError(null);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Spotify is unavailable");
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
 
-    async function refresh() {
-      try {
-        const statusResponse = await fetch(`${API_BASE_URL}/spotify/status`);
-        if (!statusResponse.ok) throw new Error("Spotify status is unavailable");
-
-        const nextStatus = (await statusResponse.json()) as SpotifyStatus;
-        if (cancelled) return;
-        setStatus(nextStatus);
-
-        if (!nextStatus.connected) {
-          setPlayback(null);
-          setError(null);
-          return;
-        }
-
-        const playbackResponse = await fetch(`${API_BASE_URL}/spotify/now-playing`);
-        if (!playbackResponse.ok) throw new Error("Now playing is unavailable");
-
-        const nextPlayback = (await playbackResponse.json()) as SpotifyNowPlaying;
-        if (!cancelled) {
-          setPlayback(nextPlayback);
-          setError(null);
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setError(requestError instanceof Error ? requestError.message : "Spotify is unavailable");
-        }
-      }
+    async function poll() {
+      if (cancelled) return;
+      await refresh();
     }
 
-    void refresh();
-    const interval = window.setInterval(refresh, POLL_INTERVAL_MS);
+    void poll();
+    const interval = window.setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
@@ -131,10 +295,22 @@ export function SpotifyCards() {
           </span>
           Spotify
         </div>
-        <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-1.5 text-xs font-medium backdrop-blur">
-          <span className={`h-2 w-2 rounded-full ${playback?.is_playing ? "animate-pulse bg-green-400" : "bg-current opacity-50"}`} />
-          {playback?.is_playing ? "Now playing" : item ? "Paused" : "Idle"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-1.5 text-xs font-medium backdrop-blur">
+            <span
+              className={`h-2 w-2 rounded-full ${playback?.is_playing ? "animate-pulse bg-green-400" : "bg-current opacity-50"}`}
+            />
+            {playback?.is_playing ? "Now playing" : item ? "Paused" : "Idle"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="grid h-9 w-9 place-items-center rounded-full bg-black/20 backdrop-blur transition-colors hover:bg-black/30"
+            aria-label="Spotify settings"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       {error ? (
@@ -155,13 +331,22 @@ export function SpotifyCards() {
             <Music2 className="mx-auto mb-4 h-10 w-10 opacity-70" />
             <h1 className="text-2xl font-bold">Connect your Spotify</h1>
             <p className="mt-2 max-w-sm text-sm opacity-70">{status.message}</p>
-            {status.configured && (
-              <a
-                href={loginUrl}
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1ed760] px-5 py-2.5 text-sm font-bold text-black transition-transform hover:scale-105"
-              >
-                Connect Spotify <ExternalLink className="h-4 w-4" />
-              </a>
+            <a
+              href={status.configured ? loginUrl : undefined}
+              onClick={
+                status.configured
+                  ? undefined
+                  : (event) => {
+                      event.preventDefault();
+                      setSettingsOpen(true);
+                    }
+              }
+              className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-[#1ed760] px-5 py-2.5 text-sm font-bold text-black transition-transform hover:scale-105"
+            >
+              {status.configured ? "Connect Spotify" : "Set up Spotify"} <ExternalLink className="h-4 w-4" />
+            </a>
+            {!status.configured && (
+              <p className="mt-3 text-xs opacity-60">Missing client ID/secret - click above to add them.</p>
             )}
           </div>
         </div>
@@ -191,7 +376,9 @@ export function SpotifyCards() {
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] opacity-60 compact:hidden">
               {item.type === "episode" ? "Episode" : "Now playing"}
             </p>
-            <h1 className="truncate text-4xl font-black tracking-tight sm:text-5xl compact:text-2xl">{item.name}</h1>
+            <h1 className="truncate text-4xl font-black tracking-tight sm:text-5xl compact:text-2xl">
+              {item.name}
+            </h1>
             <p className="mt-2 truncate text-lg font-medium opacity-75 compact:mt-1 compact:text-sm">
               {item.artists.join(", ") || item.album || "Spotify"}
             </p>
@@ -199,7 +386,10 @@ export function SpotifyCards() {
 
             <div className="mt-7 compact:mt-4">
               <div className="h-1.5 overflow-hidden rounded-full bg-black/25">
-                <div className="h-full rounded-full bg-current transition-[width] duration-500" style={{ width: `${progress}%` }} />
+                <div
+                  className="h-full rounded-full bg-current transition-[width] duration-500"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
               <div className="mt-2 flex justify-between text-xs font-medium tabular-nums opacity-65">
                 <span>{formatTime(playback.progress_ms)}</span>
@@ -209,17 +399,35 @@ export function SpotifyCards() {
 
             <div className="mt-5 flex items-center justify-between gap-4 compact:mt-3">
               <div className="flex min-w-0 items-center gap-2 text-xs font-medium opacity-65">
-                {playback.is_playing ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
+                {playback.is_playing ? (
+                  <Play className="h-4 w-4 fill-current" />
+                ) : (
+                  <Pause className="h-4 w-4 fill-current" />
+                )}
                 <span className="truncate">{playback.device?.name ?? "Spotify"}</span>
               </div>
               {item.spotify_url && (
-                <a href={item.spotify_url} target="_blank" rel="noreferrer" className="rounded-full bg-black/20 p-2.5 transition-colors hover:bg-black/30" aria-label="Open in Spotify">
+                <a
+                  href={item.spotify_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full bg-black/20 p-2.5 transition-colors hover:bg-black/30"
+                  aria-label="Open in Spotify"
+                >
                   <ExternalLink className="h-4 w-4" />
                 </a>
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {settingsOpen && (
+        <SpotifySettingsDialog
+          onClose={() => setSettingsOpen(false)}
+          redirectUriDefault={status?.redirect_uri ?? ""}
+          onSaved={refresh}
+        />
       )}
     </section>
   );
