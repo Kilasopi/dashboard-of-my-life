@@ -1,4 +1,4 @@
-"""Entry point for the packaged Windows desktop app (see PyInstaller build)."""
+"""Entry point for the packaged desktop app (see PyInstaller build)."""
 
 from __future__ import annotations
 

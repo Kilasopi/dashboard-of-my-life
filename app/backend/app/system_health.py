@@ -233,7 +233,137 @@ def _native_storage() -> list[StorageStats]:
     return drives
 
 
+def _cpu_name_linux() -> str | None:
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as cpuinfo_file:
+            for line in cpuinfo_file:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return None
+
+
+def _cpu_temperature_linux(temps: dict[str, list]) -> float | None:
+    # coretemp (Intel) / k10temp or zenpower (AMD) expose an overall package/die
+    # reading first; fall back to averaging whatever a chip reports.
+    for chip in ("coretemp", "k10temp", "zenpower"):
+        entries = temps.get(chip)
+        if not entries:
+            continue
+        for entry in entries:
+            if entry.label in ("Package id 0", "Tdie", "Tctl"):
+                return entry.current
+        return entries[0].current
+    return None
+
+
+def _gpu_temperature_linux(temps: dict[str, list]) -> float | None:
+    for chip in ("amdgpu", "nouveau"):
+        entries = temps.get(chip)
+        if entries:
+            return entries[0].current
+    return None
+
+
+def _nvidia_gpu_linux() -> GpuStats | None:
+    import shutil
+    import subprocess
+
+    if not shutil.which("nvidia-smi"):
+        return None
+    try:
+        output = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,utilization.gpu,temperature.gpu,memory.used,memory.total",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=2.0,
+            check=True,
+        ).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        return None
+
+    first_line = output.splitlines()[0] if output else ""
+    parts = [part.strip() for part in first_line.split(",")]
+    if len(parts) != 5:
+        return None
+    name, load, temp, mem_used, mem_total = parts
+    return GpuStats(
+        name=name,
+        load_percent=_parse_value(load),
+        temperature_c=_parse_value(temp),
+        memory_used_gb=round(float(mem_used) / 1024, 2) if mem_used.replace(".", "", 1).isdigit() else None,
+        memory_total_gb=round(float(mem_total) / 1024, 2) if mem_total.replace(".", "", 1).isdigit() else None,
+    )
+
+
+def _apply_storage_temperatures_linux(storage: list[StorageStats], temps: dict[str, list]) -> None:
+    # NVMe controllers expose their own composite temperature via hwmon without
+    # needing smartctl/root; SATA/SSD drives generally don't without smartctl.
+    nvme_entries = temps.get("nvme")
+    if not nvme_entries:
+        return
+    composite = next((e.current for e in nvme_entries if e.label == "Composite"), nvme_entries[0].current)
+    for drive in storage:
+        if "nvme" in drive.name.lower():
+            drive.temperature_c = composite
+
+
+def _build_native_linux() -> SystemHealth:
+    per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+    temps: dict[str, list] = {}
+    try:
+        temps = psutil.sensors_temperatures() or {}
+    except (AttributeError, OSError):
+        pass
+
+    cpu = CpuStats(
+        name=_cpu_name_linux(),
+        load_percent=round(sum(per_core) / len(per_core), 1) if per_core else None,
+        per_core_load_percent=per_core,
+        temperature_c=_cpu_temperature_linux(temps),
+    )
+    vm = psutil.virtual_memory()
+    memory = MemoryStats(
+        load_percent=vm.percent,
+        used_gb=round((vm.total - vm.available) / (1024**3), 2),
+        total_gb=round(vm.total / (1024**3), 2),
+    )
+
+    gpus: list[GpuStats] = []
+    nvidia_gpu = _nvidia_gpu_linux()
+    if nvidia_gpu:
+        gpus.append(nvidia_gpu)
+    else:
+        amd_temp = _gpu_temperature_linux(temps)
+        if amd_temp is not None:
+            gpus.append(GpuStats(name="GPU", temperature_c=amd_temp))
+
+    storage = _native_storage()
+    _apply_storage_temperatures_linux(storage, temps)
+
+    return SystemHealth(
+        source="fallback",
+        generated_at=datetime.now(UTC),
+        message=None if temps else (
+            "No hwmon temperature sensors were found. Install/load your CPU's sensor "
+            "driver (e.g. `sudo sensors-detect` from lm-sensors) for temperature data."
+        ),
+        cpu=cpu,
+        memory=memory,
+        gpu=gpus,
+        storage=storage,
+    )
+
+
 def _build_fallback() -> SystemHealth:
+    if platform.system() == "Linux" and not _is_containerized():
+        return _build_native_linux()
+
     containerized = _is_containerized()
 
     per_core = psutil.cpu_percent(interval=0.1, percpu=True)
@@ -274,16 +404,20 @@ def _build_fallback() -> SystemHealth:
 @router.get("/health", response_model=SystemHealth)
 def get_system_health() -> SystemHealth:
     leaves = _fetch_lhm_leaves()
-    health = _build_from_lhm(leaves) if leaves else _build_fallback()
-
-    # psutil re-enumerates whatever Windows currently has mounted on every request, so
-    # it picks up drives you plug in or remove without a restart - and it's the only
-    # source that reliably sees new external drives at all (LHM's SMART-based storage
-    # list often can't see removable media through a USB bridge chip). Prefer it
-    # whenever we can see the real filesystem; LHM's physical-disk view (with temps)
-    # is only used as a last resort when the backend is sandboxed in a container.
-    if not _is_containerized():
-        health.storage = _native_storage()
+    if leaves:
+        health = _build_from_lhm(leaves)
+        # psutil re-enumerates whatever Windows currently has mounted on every request, so
+        # it picks up drives you plug in or remove without a restart - and it's the only
+        # source that reliably sees new external drives at all (LHM's SMART-based storage
+        # list often can't see removable media through a USB bridge chip). Prefer it
+        # whenever we can see the real filesystem; LHM's physical-disk view (with temps)
+        # is only used as a last resort when the backend is sandboxed in a container.
+        if not _is_containerized():
+            health.storage = _native_storage()
+    else:
+        # On Linux, _build_fallback already does its own native storage read (with
+        # hwmon temps attached) - overwriting it here would drop those temps.
+        health = _build_fallback()
 
     return health
 

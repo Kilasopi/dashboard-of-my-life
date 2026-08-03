@@ -79,6 +79,33 @@ with **Options > Remote Web Server** enabled (default port 8085) before launchin
 otherwise the System Health card falls back to approximate CPU/memory plus real
 drive-letter usage from `psutil`.
 
+## Desktop App (Linux)
+
+Same PyInstaller spec, built natively on Linux instead of cross-compiled - it
+produces a single-file ELF binary (`DashboardOfMyLife`) instead of an `.exe`.
+`pywebview` needs a GTK WebKit backend on Linux, so install that first:
+
+```bash
+sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+
+cd app/frontend
+npm install
+npm run build
+
+cd ../backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-desktop.txt
+pyinstaller DashboardOfMyLife.spec
+```
+
+The binary is written to `app/backend/dist/DashboardOfMyLife` - mark it executable
+(`chmod +x`) and run it directly, or double-click it from a file manager that
+allows executing local files. No LibreHardwareMonitor equivalent is needed on
+Linux: CPU/GPU temperatures and drive stats are read natively via `psutil`'s
+`hwmon` sensors (and `nvidia-smi` if an NVIDIA GPU is present), so the System
+Health card gets real temperature data out of the box.
+
 ## Backend Linting
 
 ```bat
