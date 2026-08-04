@@ -1,4 +1,4 @@
-import { Activity, Code2, Music2, Timer as TimerIcon } from "lucide-react";
+import { Activity, Code2, Music2, Timer as TimerIcon, Wallet } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { NavTile } from "@/components/dashboard/NavTile";
@@ -46,6 +46,12 @@ export default function Overview() {
           icon={<Music2 className="h-5 w-5 compact:h-3.5 compact:w-3.5" />}
           label="Now Playing"
           description="Album art, playback progress, and song color"
+        />
+        <NavTile
+          to="/finances"
+          icon={<Wallet className="h-5 w-5 compact:h-3.5 compact:w-3.5" />}
+          label="Finances"
+          description="Track your finances and manage your budget effectively"
         />
       </section>
     </>

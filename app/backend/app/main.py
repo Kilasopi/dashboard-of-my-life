@@ -10,13 +10,14 @@ from app.claude_usage import router as claude_usage_router
 from app.programming_status import router as programming_status_router
 from app.spotify import router as spotify_router
 from app.system_health import router as system_health_router
+from app.finances import router as finances_router
 
 app = FastAPI(title="Dashboard of My Life API")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"http://localhost:\d+",
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "DELETE", "PUT"],
     allow_headers=["*"],
 )
 
@@ -24,6 +25,7 @@ app.include_router(system_health_router)
 app.include_router(programming_status_router)
 app.include_router(spotify_router)
 app.include_router(claude_usage_router)
+app.include_router(finances_router)
 
 
 def _frontend_dist_dir() -> Path:

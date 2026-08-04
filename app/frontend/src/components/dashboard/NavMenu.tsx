@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, VisuallyHidden } from "radix-ui";
 import { NavLink } from "react-router-dom";
-import { Activity, Code2, Home, Menu, Music2, Timer as TimerIcon, X } from "lucide-react";
+import { Activity, Code2, Home, Menu, Music2, Timer as TimerIcon, X, Wallet } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: "/timer", label: "Focus Timer", icon: TimerIcon, end: false },
   { to: "/system-health", label: "System Health", icon: Activity, end: false },
   { to: "/spotify", label: "Now Playing", icon: Music2, end: false },
+  { to: "/finances", label: "Finances", icon: Wallet, end: false },
 ];
 
 export function NavMenu() {

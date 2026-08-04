@@ -16,6 +16,17 @@ export default defineConfig({
       "/programming/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
       "/spotify/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
       "/claude-usage/": process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+      // The frontend page route and the backend API path are both literally
+      // "/finances" (unlike the other cards, which use distinct names) - so this
+      // matches on request *method* instead of path to avoid proxying a real page
+      // load/refresh of the /finances page to the backend and getting raw JSON
+      // back instead of the SPA.
+      "/finances": {
+        target: process.env.VITE_DEV_BACKEND_URL ?? "http://localhost:8000",
+        bypass: (req) => (req.method === "GET" && req.headers.accept?.includes("text/html")
+          ? req.url
+          : undefined),
+      },
     },
   },
   resolve: {

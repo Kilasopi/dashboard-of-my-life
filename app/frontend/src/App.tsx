@@ -5,6 +5,7 @@ import { ProgrammingCard } from "@/components/dashboard/cards/ProgrammingCard";
 import { SpotifyCards } from "@/components/dashboard/cards/SpotifyCard";
 import { SystemHealthCard } from "@/components/dashboard/cards/SystemHealthCard";
 import { TimerCard } from "@/components/dashboard/cards/TimerCard";
+import { FinancesCard } from "@/components/dashboard/cards/FinancesCard";
 import Overview from "@/pages/Overview";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/timer" element={<TimerCard />} />
         <Route path="/system-health" element={<SystemHealthCard />} />
         <Route path="/spotify" element={<SpotifyCards />} />
+        <Route path="/finances" element={<FinancesCard />} />
       </Route>
     </Routes>
   );
